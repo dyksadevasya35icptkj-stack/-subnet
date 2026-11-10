@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NETCRACK // Network Infiltration Suite v3</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+
+    :root {
+      --green:#00ff41; --green-dim:#00aa2c; --green-dark:#001a05;
+      --bg:#000; --bg2:#050d05; --panel:#060f06;
+      --border:rgba(0,255,65,.18); --border-b:rgba(0,255,65,.65);
+      --red:#ff003c; --cyan:#00f5ff; --yellow:#ffe600;
+      --purple:#cc00ff; --orange:#ff8c00;
+      --dim:#2d5c2d; --dimmer:#1a3a1a;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:var(--bg);color:var(--green);font-family:'Share Tech Mono',monospace;min-height:100vh;overflow-x:hidden;}
+
+    #matrix-canvas{position:fixed;inset:0;opacity:.06;pointer-events:none;z-index:0;}
+    body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,65,.012) 2px,rgba(0,255,65,.012) 4px);pointer-events:none;z-index:9999;}
+
+    /* ── HEADER ── */
+    header{position:relative;z-index:10;border-bottom:1px solid var(--border-b);background:linear-gradient(180deg,#001a05,#000);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+    .logo{font-family:'Orbitron',monospace;font-size:1.6rem;font-weight:900;color:var(--green);text-shadow:0 0 20px var(--green),0 0 40px var(--green-dim);letter-spacing:4px;}
+    .logo span{color:var(--red);text-shadow:0 0 20px var(--red);}
+    .hdr-mid{font-size:.65rem;color:var(--dim);text-align:center;line-height:1.9;}
+    .hdr-mid .live{color:var(--yellow);}
+    .hdr-right{font-size:.62rem;color:var(--dim);text-align:right;line-height:1.9;}
+    .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:blink 1.2s infinite;}
+    @keyframes blink{50%{opacity:.15;}}
+    @keyframes flicker{0%,94%,100%{opacity:1;}95%{opacity:.4;}97%{opacity:.2;}99%{opacity:.85;}}
+    .flicker{animation:flicker 9s infinite;}
+
+    /* ── NAV ── */
+    nav{position:relative;z-index:10;display:flex;gap:0;border-bottom:1px solid var(--border);background:var(--bg2);padding:0 20px;overflow-x:auto;}
+    .tab-btn{background:none;border:none;outline:none;color:var(--dim);font-family:'Share Tech Mono',monospace;font-size:.75rem;padding:11px 18px;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;letter-spacing:1px;white-space:nowrap;}
+    .tab-btn:hover{color:var(--green);}
+    .tab-btn.active{color:var(--green);border-bottom-color:var(--green);text-shadow:0 0 8px var(--green);background:rgba(0,255,65,.04);}
+    .tab-btn::before{content:'> ';color:var(--dim);}
+
+    /* ── LAYOUT ── */
+    .content-area{position:relative;z-index:10;max-width:1300px;margin:0 auto;padding:24px 18px;}
+    .tab-panel{display:none;}
+    .tab-panel.active{display:block;}
+    .g2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+    .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+    .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+    @media(max-width:900px){.g2,.g3,.g4{grid-template-columns:1fr;}}
+    @media(max-width:1100px){.g4{grid-template-columns:1fr 1fr;}}
+
+    /* ── PANELS ── */
+    .panel{background:var(--panel);border:1px solid var(--border);border-radius:1px;padding:20px;margin-bottom:18px;position:relative;overflow:hidden;}
+    .panel::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--green),transparent);}
+    .panel-title{font-family:'Orbitron',monospace;font-size:.7rem;color:var(--green-dim);letter-spacing:2.5px;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+    .panel-title::before{content:'//';color:var(--red);margin-right:2px;}
+    .panel-sub{font-size:.62rem;color:var(--dim);margin-top:4px;margin-bottom:14px;}
+
+    /* ── SCAN BAR ── */
+    .scan{height:1px;background:var(--border);margin:10px 0;position:relative;overflow:hidden;}
+    .scan::after{content:'';position:absolute;left:-30%;width:30%;height:100%;background:linear-gradient(90deg,transparent,var(--green),transparent);animation:scan 2.4s infinite;}
+    @keyframes scan{to{left:110%;}}
+
+    /* ── INPUTS ── */
+    .field{margin-bottom:14px;}
+    .field-label{display:block;font-size:.7rem;color:var(--green-dim);margin-bottom:4px;letter-spacing:1px;}
+    .field-label .req{color:var(--red);}
+    .field-hint{font-size:.62rem;color:var(--dim);margin-top:4px;line-height:1.5;}
+    .field-hint .hl{color:var(--yellow);}
+
+    input[type=text],input[type=number],select,textarea{
+      width:100%;background:#000;border:1px solid #0d2b0d;color:var(--green);
+      font-family:'Share Tech Mono',monospace;font-size:.9rem;padding:9px 12px;
+      outline:none;transition:border-color .2s,box-shadow .2s;border-radius:1px;
+    }
+    input.valid{border-color:var(--green);box-shadow:0 0 8px rgba(0,255,65,.2);}
+    input.invalid{border-color:var(--red);box-shadow:0 0 8px rgba(255,0,60,.2);}
+    input.warn{border-color:var(--yellow);}
+    input:focus{border-color:var(--green);box-shadow:0 0 10px rgba(0,255,65,.25),inset 0 0 6px rgba(0,255,65,.04);}
+    select:focus{border-color:var(--green);box-shadow:0 0 10px rgba(0,255,65,.25);}
+    select option{background:#000;color:var(--green);}
+    .err-txt{font-size:.65rem;color:var(--red);margin-top:4px;display:none;}
+    .err-txt.show{display:block;}
+
+    /* ── OCTET ROW ── */
+    .ip-row{display:flex;align-items:flex-start;gap:0;flex-wrap:wrap;}
+    .ip-block{display:flex;flex-direction:column;align-items:center;}
+    .ip-block input{width:68px;text-align:center;}
+    .ip-block .oh{font-size:.55rem;color:var(--dim);margin-top:3px;text-align:center;line-height:1.3;}
+    .ip-sep{color:var(--red);font-size:1.3rem;padding:0 4px;margin-top:8px;}
+    .pfx-sep{color:var(--dim);font-size:1.1rem;padding:0 6px;margin-top:8px;}
+
+    /* ── BUTTONS ── */
+    .btn{background:transparent;border:1px solid var(--green);color:var(--green);font-family:'Share Tech Mono',monospace;font-size:.8rem;padding:9px 20px;cursor:pointer;letter-spacing:1.5px;transition:all .2s;position:relative;overflow:hidden;}
+    .btn::before{content:'';position:absolute;inset:0;background:var(--green);transform:translateX(-101%);transition:transform .2s;z-index:0;}
+    .btn:hover::before{transform:translateX(0);}
+    .btn:hover{color:#000;}
+    .btn span{position:relative;z-index:1;}
+    .btn-r{border-color:var(--red);color:var(--red);}
+    .btn-r::before{background:var(--red);}
+    .btn-r:hover{color:#fff;}
+    .btn-y{border-color:var(--yellow);color:var(--yellow);}
+    .btn-y::before{background:var(--yellow);}
+    .btn-y:hover{color:#000;}
+    .btn-row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
+
+    /* ── RESULT BOXES ── */
+    .rbox{background:#000;border:1px solid var(--border);padding:14px;margin-bottom:10px;}
+    .rrow{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #0a1a0a;padding:7px 2px;gap:12px;flex-wrap:wrap;}
+    .rrow:last-child{border-bottom:none;}
+    .rlabel{color:var(--dim);font-size:.7rem;min-width:160px;}
+    .rval{font-size:.92rem;text-align:right;}
+    .c-green{color:var(--green);text-shadow:0 0 8px var(--green);}
+    .c-cyan{color:var(--cyan);text-shadow:0 0 6px var(--cyan);}
+    .c-red{color:var(--red);text-shadow:0 0 8px var(--red);}
+    .c-yellow{color:var(--yellow);text-shadow:0 0 6px var(--yellow);}
+    .c-purple{color:var(--purple);text-shadow:0 0 6px var(--purple);}
+    .c-orange{color:var(--orange);}
+
+    /* ── STAT CARDS ── */
+    .stat{background:#000;border:1px solid var(--border);padding:14px 10px;text-align:center;}
+    .stat-n{font-family:'Orbitron',monospace;font-size:1.3rem;color:var(--cyan);text-shadow:0 0 10px var(--cyan);}
+    .stat-l{font-size:.6rem;color:var(--dim);letter-spacing:1.5px;margin-top:4px;}
+    .stat-s{font-size:.62rem;color:var(--dim);margin-top:2px;}
+
+    /* ── TERMINAL ── */
+    .term{background:#000;border:1px solid var(--border);padding:14px;font-size:.8rem;line-height:1.9;min-height:80px;max-height:320px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;}
+    .term::-webkit-scrollbar{width:3px;}
+    .term::-webkit-scrollbar-thumb{background:var(--dim);}
+    .tg{color:var(--green);} .tc{color:var(--cyan);} .tr{color:var(--red);}
+    .ty{color:var(--yellow);} .td{color:var(--dim);} .tw{color:#aaa;}
+    .tp{color:var(--purple);}
+
+    /* ── BIT VISUALIZER ── */
+    .bit-wrap{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0;}
+    .bit-grp{display:flex;gap:1px;}
+    .bit{width:26px;height:30px;display:flex;align-items:center;justify-content:center;font-size:.95rem;font-weight:bold;border:1px solid #0d2b0d;background:#000;transition:all .15s;}
+    .bit.b1{color:var(--green);border-color:var(--green-dim);text-shadow:0 0 5px var(--green);background:rgba(0,255,65,.06);}
+    .bit.b0{color:var(--dimmer);}
+    .bit.bN{color:var(--cyan);border-color:rgba(0,245,255,.3);text-shadow:0 0 5px var(--cyan);background:rgba(0,245,255,.05);}  /* network bit */
+    .bit.bH{color:var(--yellow);border-color:rgba(255,230,0,.2);background:rgba(255,230,0,.03);}  /* host bit */
+    .bsep{width:8px;display:flex;align-items:flex-end;justify-content:center;color:var(--red);font-size:.65rem;padding-bottom:2px;}
+
+    /* ── BINARY BREAKDOWN LEGEND ── */
+    .legend{display:flex;gap:16px;font-size:.65rem;color:var(--dim);margin-top:6px;flex-wrap:wrap;}
+    .leg-item{display:flex;align-items:center;gap:5px;}
+    .leg-box{width:12px;height:12px;border:1px solid;}
+
+    /* ── TABLE ── */
+    table{width:100%;border-collapse:collapse;font-size:.78rem;}
+    th{background:#001a05;color:var(--dim);padding:8px 10px;text-align:left;border:1px solid var(--border);font-size:.68rem;letter-spacing:1px;}
+    td{padding:6px 10px;border:1px solid var(--dimmer);color:var(--cyan);}
+    tr:hover td{background:rgba(0,255,65,.03);}
+    .tr-hl td{background:rgba(0,255,65,.07)!important;border-left:2px solid var(--green);}
+
+    /* ── BADGE ── */
+    .badge{display:inline-block;padding:2px 8px;font-size:.62rem;border:1px solid;letter-spacing:1px;}
+    .badge-g{color:var(--green);border-color:var(--green-dim);}
+    .badge-r{color:var(--red);border-color:var(--red);}
+    .badge-y{color:var(--yellow);border-color:var(--yellow);}
+    .badge-c{color:var(--cyan);border-color:var(--cyan);}
+    .badge-p{color:var(--purple);border-color:var(--purple);}
+
+    /* ── TOOLTIP ── */
+    .tip-wrap{position:relative;display:inline-block;}
+    .tip-icon{color:var(--dim);cursor:help;font-size:.75rem;margin-left:5px;border:1px solid var(--dim);width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;}
+    .tip-box{position:absolute;left:0;top:120%;background:#001a05;border:1px solid var(--border-b);color:var(--green);font-size:.65rem;padding:8px 12px;width:240px;z-index:100;line-height:1.6;display:none;pointer-events:none;}
+    .tip-wrap:hover .tip-box{display:block;}
+
+    /* ── NOTIF ── */
+    .notif{position:fixed;bottom:18px;right:18px;background:#001a05;border:1px solid var(--green);padding:10px 18px;font-size:.75rem;color:var(--green);z-index:1000;display:none;box-shadow:0 0 20px rgba(0,255,65,.3);}
+
+    footer{position:relative;z-index:10;text-align:center;padding:14px;font-size:.6rem;color:var(--dim);border-top:1px solid var(--border);letter-spacing:2px;}
+
+    /* ── DIVIDER ── */
+    .divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
+    .section-tag{font-size:.62rem;color:var(--red);letter-spacing:2px;margin-bottom:8px;}
+
+    /* scrollbar global */
+    ::-webkit-scrollbar{width:4px;height:4px;}
+    ::-webkit-scrollbar-track{background:#000;}
+    ::-webkit-scrollbar-thumb{background:var(--dim);}
+  </style>
+</head>
+<body>
+<canvas id="matrix-canvas"></canvas>
+
+<!-- ═══ HEADER ═══ -->
+<header>
+  <div class="logo flicker">NET<span>CRACK</span></div>
+  <div class="hdr-mid">
+    <div>◈ NETWORK INFILTRATION SUITE v3.0 ◈</div>
+    <div>IP ANALYSIS · SUBNET DECODER · BINARY TOOLS</div>
+    <div class="live" id="clock-live">──────────────</div>
+  </div>
+  <div class="hdr-right">
+    <div><span class="dot"></span> SYSTEM ONLINE</div>
+    <div>PROXY: 7-LAYER CHAIN</div>
+    <div>VPN: TOR ACTIVE</div>
+    <div>ENC: AES-256-GCM</div>
+  </div>
+</header>
+
+<!-- ═══ NAV ═══ -->
+<nav>
+  <button class="tab-btn active" onclick="sw('binary',this)">BINARY CONVERTER</button>
+  <button class="tab-btn" onclick="sw('subnet',this)">SUBNET ANALYZER</button>
+  <button class="tab-btn" onclick="sw('prefix',this)">PREFIX CALCULATOR</button>
+  <button class="tab-btn" onclick="sw('split',this)">SUBNET SPLITTER</button>
+</nav>
+
+<!-- ═══ CONTENT ═══ -->
+<div class="content-area">
+
+  <!-- ══════════════════════════════════════════
+       TAB 1 — BINARY CONVERTER
+  ══════════════════════════════════════════ -->
+  <div class="tab-panel active" id="tab-binary">
+
+    <div class="panel">
+      <div class="panel-title">BINARY / NUMBER BASE CONVERTER</div>
+      <div class="panel-sub">// Konversi angka antar sistem bilangan: Decimal · Binary · Hexadecimal · Octal</div>
+      <div class="scan"></div>
+
+      <div class="g2">
+        <!-- INPUT SIDE -->
+        <div>
+          <div class="field">
+            <label class="field-label">
+              <span class="req">★</span> FORMAT INPUT
+              <span class="tip-wrap">
+                <span class="tip-icon">?</span>
+                <span class="tip-box">Pilih dulu format angka yang ingin kamu masukkan, lalu ketik nilainya di bawah.</span>
+              </span>
+            </label>
+            <select id="conv-from" onchange="autoConvert()">
+              <option value="dec">DECIMAL  — Base 10  (0-9)</option>
+              <option value="bin">BINARY   — Base 2   (0 dan 1 saja)</option>
+              <option value="hex">HEX      — Base 16  (0-9, A-F)</option>
+              <option value="oct">OCTAL    — Base 8   (0-7)</option>
+            </select>
+            <div class="field-hint">Pilih sistem bilangan dari angka yang akan kamu konversi.</div>
+          </div>
+
+          <div class="field">
+            <label class="field-label">
+              <span class="req">★</span> NILAI INPUT
+              <span class="tip-wrap">
+                <span class="tip-icon">?</span>
+                <span class="tip-box">Masukkan angka sesuai format yang dipilih. Contoh: Decimal → 255, Binary → 11111111, Hex → FF, Octal → 377</span>
+              </span>
+            </label>
+            <input type="text" id="conv-input" placeholder="Ketik angka di sini..." oninput="autoConvert()"/>
+            <div class="field-hint" id="conv-hint">
+              <span class="hl">Decimal</span>: Masukkan angka biasa (0–9). Contoh: <span class="hl">255</span>
+            </div>
+            <div class="err-txt" id="conv-err">⚠ Format tidak valid untuk sistem bilangan yang dipilih</div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn" onclick="autoConvert()"><span>[ KONVERSI ]</span></button>
+            <button class="btn btn-r" onclick="clearConv()"><span>[ HAPUS ]</span></button>
+          </div>
+        </div>
+
+        <!-- OUTPUT SIDE -->
+        <div>
+          <div class="section-tag">// HASIL KONVERSI</div>
+          <div class="rbox">
+            <div class="rrow">
+              <span class="rlabel">DECIMAL (Base-10)</span>
+              <span class="rval c-cyan" id="o-dec">—</span>
+            </div>
+            <div class="rrow">
+              <span class="rlabel">BINARY (Base-2)</span>
+              <span class="rval c-green" id="o-bin">—</span>
+            </div>
+            <div class="rrow">
+              <span class="rlabel">HEXADECIMAL (Base-16)</span>
+              <span class="rval c-yellow" id="o-hex">—</span>
+            </div>
+            <div class="rrow">
+              <span class="rlabel">OCTAL (Base-8)</span>
+              <span class="rval c-purple" id="o-oct">—</span>
+            </div>
+          </div>
+          <div class="rbox" id="o-extra" style="display:none;">
+            <div class="rrow"><span class="rlabel">SIGNED 32-bit</span><span class="rval" id="o-signed">—</span></div>
+            <div class="rrow"><span class="rlabel">BIN (8-bit groups)</span><span class="rval c-green" style="font-size:.78rem;" id="o-bingrp">—</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BIT VISUALIZER -->
+      <hr class="divider"/>
+      <div class="section-tag">// VISUALISASI BIT (menyala = 1, redup = 0)</div>
+      <div class="bit-wrap" id="bit-vis"></div>
+      <div class="field-hint" style="margin-top:4px;">
+        Setiap kotak = 1 bit. Dikelompokkan per 8 bit (1 byte). Bit paling kiri = nilai terbesar.
+      </div>
+    </div>
+
+    <!-- ASCII ENCODER -->
+    <div class="panel">
+      <div class="panel-title">ASCII TEXT → BINARY ENCODER</div>
+      <div class="panel-sub">// Ubah teks biasa menjadi representasi biner per karakter</div>
+      <div class="field">
+        <label class="field-label"><span class="req">★</span> TEKS INPUT</label>
+        <input type="text" id="ascii-in" placeholder="Ketik teks apa saja, contoh: Hello World" oninput="encodeAscii()"/>
+        <div class="field-hint">Setiap karakter akan dikonversi ke kode ASCII-nya (desimal) lalu ke biner 8-bit.</div>
+      </div>
+      <div class="term" id="ascii-out">[ Ketik teks di atas untuk memulai encoding... ]</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       TAB 2 — SUBNET ANALYZER (DETAIL)
+  ══════════════════════════════════════════ -->
+  <div class="tab-panel" id="tab-subnet">
+
+    <div class="panel">
+      <div class="panel-title">TARGET IP — SUBNET ANALYSIS ENGINE</div>
+      <div class="panel-sub">// Masukkan IP Address dan prefix untuk mendapatkan seluruh informasi subnet secara detail</div>
+      <div class="scan"></div>
+
+      <div class="g2">
+        <div>
+          <!-- IP ADDRESS INPUT -->
+          <div class="field">
+            <label class="field-label">
+              <span class="req">★</span> IP ADDRESS
+              <span class="tip-wrap">
+                <span class="tip-icon">?</span>
+                <span class="tip-box">IPv4 terdiri dari 4 oktet (0–255) dipisahkan titik. Contoh: 192.168.1.100 atau 10.0.0.1</span>
+              </span>
+            </label>
+            <div class="ip-row">
+              <div class="ip-block">
+                <input type="number" id="ip1" min="0" max="255" placeholder="192" oninput="clampO(this);liveSubnetPreview()"/>
+                <div class="oh">Oktet 1<br/>(0–255)</div>
+              </div>
+              <span class="ip-sep">.</span>
+              <div class="ip-block">
+                <input type="number" id="ip2" min="0" max="255" placeholder="168" oninput="clampO(this);liveSubnetPreview()"/>
+                <div class="oh">Oktet 2<br/>(0–255)</div>
+              </div>
+              <span class="ip-sep">.</span>
+              <div class="ip-block">
+                <input type="number" id="ip3" min="0" max="255" placeholder="1" oninput="clampO(this);liveSubnetPreview()"/>
+                <div class="oh">Oktet 3<br/>(0–255)</div>
+              </div>
+              <span class="ip-sep">.</span>
+              <div class="ip-block">
+                <input type="number" id="ip4" min="0" max="255" placeholder="100" oninput="clampO(this);liveSubnetPreview()"/>
+                <div class="oh">Oktet 4<br/>Host ID</div>
+              </div>
+              <span class="pfx-sep" style="font-size:1.3rem;margin-top:8px;">/</span>
+              <div class="ip-block">
+                <input type="number" id="ip-pfx" min="0" max="32" placeholder="24" oninput="clampP(this);liveSubnetPreview()" style="width:62px;"/>
+                <div class="oh">Prefix<br/>(0–32)</div>
+              </div>
+            </div>
+            <div class="field-hint">
+              <span class="hl">Format:</span> [Oktet1].[Oktet2].[Oktet3].[Oktet4]/[Prefix] &nbsp;·&nbsp;
+              Contoh: <span class="hl">192.168.1.100/24</span> &nbsp;|&nbsp; <span class="hl">10.0.0.1/8</span> &nbsp;|&nbsp; <span class="hl">172.16.5.1/16</span>
+            </div>
+            <div class="err-txt" id="sub-err">⚠ Pastikan semua oktet bernilai 0–255 dan prefix 0–32</div>
+          </div>
+
+          <!-- LIVE PREVIEW -->
+          <div class="rbox" id="live-prev" style="display:none;padding:10px 14px;">
+            <div style="font-size:.65rem;color:var(--dim);margin-bottom:4px;">LIVE PREVIEW</div>
+            <div style="font-size:.88rem;" id="live-prev-txt">—</div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn" onclick="analyzeSubnet()"><span>[ ANALISIS SUBNET ]</span></button>
+            <button class="btn btn-r" onclick="clrSubnet()"><span>[ RESET ]</span></button>
+          </div>
+        </div>
+
+        <!-- QUICK STATS -->
+        <div>
+          <div class="section-tag">// STATISTIK CEPAT</div>
+          <div class="g2" style="gap:10px;">
+            <div class="stat"><div class="stat-n" id="q-total">—</div><div class="stat-l">TOTAL HOSTS</div><div class="stat-s">2^(32-prefix)</div></div>
+            <div class="stat"><div class="stat-n" id="q-usable">—</div><div class="stat-l">USABLE HOSTS</div><div class="stat-s">Total - 2</div></div>
+            <div class="stat"><div class="stat-n" id="q-class">—</div><div class="stat-l">KELAS IP</div><div class="stat-s">A/B/C/D/E</div></div>
+            <div class="stat"><div class="stat-n" id="q-type">—</div><div class="stat-l">TIPE IP</div><div class="stat-s">Privat / Publik</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HASIL DETAIL -->
+    <div class="panel" id="sub-result" style="display:none;">
+      <div class="panel-title">NETWORK INTELLIGENCE REPORT — DETAIL LENGKAP</div>
+      <div class="scan"></div>
+
+      <!-- ROW 1 -->
+      <div class="g2">
+        <!-- KOLOM KIRI: Alamat Penting -->
+        <div>
+          <div class="section-tag">// ALAMAT JARINGAN</div>
+          <div class="rbox">
+            <div class="rrow">
+              <div>
+                <div class="rlabel">NETWORK ID (Alamat Jaringan)</div>
+                <div style="font-size:.6rem;color:var(--dim);">Alamat pertama subnet. TIDAK bisa dipakai host.</div>
+              </div>
+              <span class="rval c-green" id="r-net">—</span>
+            </div>
+            <div class="rrow">
+              <div>
+                <div class="rlabel">SUBNET MASK</div>
+                <div style="font-size:.6rem;color:var(--dim);">Menentukan bagian mana yang Network ID dan Host ID.</div>
+              </div>
+              <div style="text-align:right;">
+                <div class="rval c-cyan" id="r-mask">—</div>
+                <div style="font-size:.62rem;color:var(--dim);" id="r-mask-hex">—</div>
+              </div>
+            </div>
+            <div class="rrow">
+              <div>
+                <div class="rlabel">WILDCARD MASK (Inverse Mask)</div>
+                <div style="font-size:.6rem;color:var(--dim);">Kebalikan subnet mask. Digunakan di ACL & OSPF.</div>
+              </div>
+              <span class="rval c-yellow" id="r-wild">—</span>
+            </div>
+            <div class="rrow">
+              <div>
+                <div class="rlabel">BROADCAST ADDRESS</div>
+                <div style="font-size:.6rem;color:var(--dim);">Alamat terakhir subnet. TIDAK bisa dipakai host.</div>
+              </div>
+              <span class="rval c-red" id="r-bcast">—</span>
+            </div>
+            <div class="rrow">
+              <div>
+                <div class="rlabel">HOST PERTAMA (First Usable)</div>
+                <div style="font-size:.6rem;color:var(--dim);">Network ID + 1. Host pertama yang bisa digunakan.</div>
+              </div>
+              <span class="rval c-green" id="r-first">—</span>
+            </div>
+            <div class="rrow">
+              <div>
+                <div class="rlabel">HOST TERAKHIR (Last Usable)</div>
+                <div style="font-size:.6rem;color:var(--dim);">Broadcast - 1. Host terakhir yang bisa digunakan.</div>
+              </div>
+              <span class="rval c-green" id="r-last">—</span>
+            </div>
+            <div class="rrow">
+              <div>
+                <div class="rlabel">RANGE HOST TERSEDIA</div>
+              </div>
+              <span class="rval" style="font-size:.8rem;color:var(--cyan);" id="r-range">—</span>
+            </div>
+            <div class="rrow">
+              <div>
+                <div class="rlabel">TOTAL HOST</div>
+                <div style="font-size:.6rem;color:var(--dim);">Termasuk Network ID dan Broadcast (tidak bisa dipakai)</div>
+              </div>
+              <span class="rval c-yellow" id="r-total">—</span>
+            </div>
+            <div class="rrow">
+              <div>
+                <div class="rlabel">HOST YANG BISA DIPAKAI</div>
+                <div style="font-size:.6rem;color:var(--dim);">Total - 2 (dikurangi Network ID + Broadcast)</div>
+              </div>
+              <span class="rval c-green" id="r-usable">—</span>
+            </div>
+            <div class="rrow">
+              <div>
+                <div class="rlabel">NOTASI CIDR</div>
+              </div>
+              <span class="rval c-cyan" id="r-cidr">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- KOLOM KANAN: Info Tambahan -->
+        <div>
+          <div class="section-tag">// INFORMASI TAMBAHAN</div>
+          <div class="rbox" style="margin-bottom:10px;">
+            <div class="rrow">
+              <div><div class="rlabel">KELAS IP</div><div style="font-size:.6rem;color:var(--dim);">Berdasarkan oktet pertama</div></div>
+              <span class="rval c-cyan" id="r-class">—</span>
+            </div>
+            <div class="rrow">
+              <div><div class="rlabel">TIPE ALAMAT</div><div style="font-size:.6rem;color:var(--dim);">Private/Public/Loopback/Multicast</div></div>
+              <span class="rval" id="r-type">—</span>
+            </div>
+            <div class="rrow">
+              <div><div class="rlabel">DEFAULT MASK KELAS</div></div>
+              <span class="rval c-dim" id="r-defmask">—</span>
+            </div>
+            <div class="rrow">
+              <div><div class="rlabel">SUBNET MASK (HEX)</div></div>
+              <span class="rval c-yellow" id="r-maskhex">—</span>
+            </div>
+            <div class="rrow">
+              <div><div class="rlabel">SUBNET MASK (DECIMAL)</div><div style="font-size:.6rem;color:var(--dim);">Nilai 32-bit tunggal</div></div>
+              <span class="rval" id="r-maskdec">—</span>
+            </div>
+            <div class="rrow">
+              <div><div class="rlabel">TOTAL SUBNET (dari default mask)</div></div>
+              <span class="rval c-cyan" id="r-nsub">—</span>
+            </div>
+            <div class="rrow">
+              <div><div class="rlabel">IP ADALAH NETWORK ID?</div></div>
+              <span class="rval" id="r-isnet">—</span>
+            </div>
+            <div class="rrow">
+              <div><div class="rlabel">IP ADALAH BROADCAST?</div></div>
+              <span class="rval" id="r-isbcast">—</span>
+            </div>
+          </div>
+
+          <!-- Subnet Mask Format Table -->
+          <div class="section-tag">// FORMAT SUBNET MASK</div>
+          <div class="rbox">
+            <div class="rrow"><span class="rlabel">Dotted Decimal</span><span class="rval c-cyan" id="f-dd">—</span></div>
+            <div class="rrow"><span class="rlabel">CIDR Prefix</span><span class="rval c-green" id="f-cidr">—</span></div>
+            <div class="rrow"><span class="rlabel">Hexadecimal</span><span class="rval c-yellow" id="f-hex">—</span></div>
+            <div class="rrow"><span class="rlabel">Binary (grouped)</span><span class="rval c-green" style="font-size:.72rem;" id="f-bin">—</span></div>
+          </div>
+        </div>
+      </div>
+
+      <hr class="divider"/>
+
+      <!-- BINARY BREAKDOWN -->
+      <div class="section-tag">// BINARY BREAKDOWN — Visualisasi Bit Network vs Host</div>
+      <div style="margin-bottom:8px;font-size:.65rem;color:var(--dim);">
+        IP Address dalam biner 32-bit. Bit <span style="color:var(--cyan);">■ BIRU = bagian Network</span> ditentukan oleh prefix, bit <span style="color:var(--yellow);">■ KUNING = bagian Host</span>
+      </div>
+      <div>
+        <div style="font-size:.65rem;color:var(--dim);margin-bottom:4px;">INPUT IP ADDRESS:</div>
+        <div class="bit-wrap" id="bb-ip"></div>
+      </div>
+      <div style="margin-top:10px;">
+        <div style="font-size:.65rem;color:var(--dim);margin-bottom:4px;">SUBNET MASK:</div>
+        <div class="bit-wrap" id="bb-mask"></div>
+      </div>
+      <div style="margin-top:10px;">
+        <div style="font-size:.65rem;color:var(--dim);margin-bottom:4px;">NETWORK ID:</div>
+        <div class="bit-wrap" id="bb-net"></div>
+      </div>
+      <div style="margin-top:10px;">
+        <div style="font-size:.65rem;color:var(--dim);margin-bottom:4px;">BROADCAST:</div>
+        <div class="bit-wrap" id="bb-bcast"></div>
+      </div>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-box" style="background:rgba(0,245,255,.1);border-color:var(--cyan);"></div><span style="color:var(--cyan);">Network Bits (dikontrol prefix)</span></div>
+        <div class="leg-item"><div class="leg-box" style="background:rgba(255,230,0,.05);border-color:var(--yellow);"></div><span style="color:var(--yellow);">Host Bits (bebas untuk host)</span></div>
+      </div>
+
+      <hr class="divider"/>
+
+      <!-- ANALYSIS LOG TERMINAL -->
+      <div class="section-tag">// ANALYSIS LOG</div>
+      <div class="term" id="sub-log">[ Belum ada analisis... ]</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       TAB 3 — PREFIX CALCULATOR
+  ══════════════════════════════════════════ -->
+  <div class="tab-panel" id="tab-prefix">
+    <div class="panel">
+      <div class="panel-title">CIDR PREFIX DECODER</div>
+      <div class="panel-sub">// Masukkan angka prefix (/0 sampai /32) untuk mendapatkan detail subnet mask dan kapasitas host</div>
+      <div class="scan"></div>
+
+      <div class="g2">
+        <div>
+          <div class="field">
+            <label class="field-label">
+              <span class="req">★</span> CIDR PREFIX
+              <span class="tip-wrap">
+                <span class="tip-icon">?</span>
+                <span class="tip-box">Prefix adalah jumlah bit yang digunakan untuk Network ID. Rentang 0–32. Semakin besar prefix, semakin kecil jaringan. Contoh: /24 = 256 host, /16 = 65.536 host, /8 = 16 juta host</span>
+              </span>
+            </label>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="color:var(--dim);font-size:1.2rem;">/</span>
+              <input type="number" id="pfx-in" min="0" max="32" placeholder="Contoh: 24" style="width:140px;" oninput="calcPfx()"/>
+            </div>
+            <div class="field-hint">
+              Masukkan angka <span class="hl">0</span> sampai <span class="hl">32</span>.<br/>
+              Contoh umum: <span class="hl">/8</span> (Kelas A), <span class="hl">/16</span> (Kelas B), <span class="hl">/24</span> (Kelas C)
+            </div>
+            <div class="err-txt" id="pfx-err">⚠ Prefix harus antara 0 dan 32</div>
+          </div>
+          <div class="btn-row">
+            <button class="btn" onclick="calcPfx()"><span>[ DECODE PREFIX ]</span></button>
+            <button class="btn btn-r" onclick="clrPfx()"><span>[ RESET ]</span></button>
+          </div>
+        </div>
+
+        <div id="pfx-result" style="display:none;">
+          <div class="section-tag">// HASIL DECODE</div>
+          <div class="rbox">
+            <div class="rrow">
+              <div><div class="rlabel">PREFIX</div></div>
+              <span class="rval c-green" id="p-pfx">—</span>
+            </div>
+            <div class="rrow">
+              <div><div class="rlabel">SUBNET MASK</div><div style="font-size:.6rem;color:var(--dim);">Dotted decimal notation</div></div>
+              <span class="rval c-cyan" id="p-mask">—</span>
+            </div>
+            <div class="rrow">
+              <div><div class="rlabel">SUBNET MASK (Binary)</div></div>
+              <span class="rval c-green" style="font-size:.72rem;" id="p-binmask">—</span>
+            </div>
+            <div class="rrow">
+              <div><div class="rlabel">SUBNET MASK (Hex)</div></div>
+              <span class="rval c-yellow" id="p-hexmask">—</span>
+            </div>
+            <div class="rrow">
+              <div><div class="rlabel">WILDCARD MASK</div><div style="font-size:.6rem;color:var(--dim);">Inverse dari subnet mask</div></div>
+              <span class="rval c-yellow" id="p-wild">—</span>
+            </div>
+            <div class="rrow">
+              <div><div class="rlabel">TOTAL HOST</div><div style="font-size:.6rem;color:var(--dim);">2^(32-prefix)</div></div>
+              <span class="rval c-green" id="p-total">—</span>
+            </div>
+            <div class="rrow">
+              <div><div class="rlabel">HOST YANG BISA DIPAKAI</div><div style="font-size:.6rem;color:var(--dim);">Total - 2 (dikurangi Network ID & Broadcast)</div></div>
+              <span class="rval c-cyan" id="p-usable">—</span>
+            </div>
+            <div class="rrow">
+              <div><div class="rlabel">JUMLAH BIT NETWORK</div></div>
+              <span class="rval c-cyan" id="p-netbits">—</span>
+            </div>
+            <div class="rrow">
+              <div><div class="rlabel">JUMLAH BIT HOST</div></div>
+              <span class="rval c-yellow" id="p-hostbits">—</span>
+            </div>
+          </div>
+          <!-- Bit visual for mask -->
+          <div style="margin-top:10px;">
+            <div style="font-size:.62rem;color:var(--dim);margin-bottom:4px;">SUBNET MASK BITS:</div>
+            <div class="bit-wrap" id="p-bitviz"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FULL TABLE -->
+    <div class="panel">
+      <div class="panel-title">TABEL REFERENSI LENGKAP — /0 s/d /32</div>
+      <div class="panel-sub">// Semua kemungkinan prefix beserta subnet mask, host, dan wildcard mask</div>
+      <div style="overflow-x:auto;">
+        <table id="pfx-tbl">
+          <thead>
+            <tr>
+              <th>PREFIX</th>
+              <th>SUBNET MASK</th>
+              <th>WILDCARD MASK</th>
+              <th>TOTAL HOST</th>
+              <th>USABLE HOST</th>
+              <th>BIT NETWORK</th>
+              <th>BIT HOST</th>
+              <th>BINARY MASK (grouped)</th>
+            </tr>
+          </thead>
+          <tbody id="pfx-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       TAB 4 — SUBNET SPLITTER
+  ══════════════════════════════════════════ -->
+  <div class="tab-panel" id="tab-split">
+    <div class="panel">
+      <div class="panel-title">SUBNET SPLITTER — BAGI JARINGAN MENJADI BEBERAPA SUBNET</div>
+      <div class="panel-sub">// Masukkan jaringan induk lalu tentukan prefix baru untuk membaginya</div>
+      <div class="scan"></div>
+
+      <div class="g2">
+        <div>
+          <!-- NETWORK INPUT -->
+          <div class="field">
+            <label class="field-label"><span class="req">★</span> NETWORK ADDRESS (Jaringan Induk)</label>
+            <div class="ip-row">
+              <div class="ip-block">
+                <input type="number" id="sn1" min="0" max="255" placeholder="192" oninput="clampO(this)"/>
+                <div class="oh">Oktet 1</div>
+              </div>
+              <span class="ip-sep">.</span>
+              <div class="ip-block">
+                <input type="number" id="sn2" min="0" max="255" placeholder="168" oninput="clampO(this)"/>
+                <div class="oh">Oktet 2</div>
+              </div>
+              <span class="ip-sep">.</span>
+              <div class="ip-block">
+                <input type="number" id="sn3" min="0" max="255" placeholder="1" oninput="clampO(this)"/>
+                <div class="oh">Oktet 3</div>
+              </div>
+              <span class="ip-sep">.</span>
+              <div class="ip-block">
+                <input type="number" id="sn4" min="0" max="255" placeholder="0" oninput="clampO(this)"/>
+                <div class="oh">Oktet 4</div>
+              </div>
+              <span class="pfx-sep" style="font-size:1.3rem;margin-top:8px;">/</span>
+              <div class="ip-block">
+                <input type="number" id="sn-pfx" min="0" max="30" placeholder="24" oninput="clampP(this)" style="width:62px;"/>
+                <div class="oh">Prefix<br/>Asli</div>
+              </div>
+            </div>
+            <div class="field-hint">
+              Masukkan <span class="hl">Network Address</span> (bukan host IP). Contoh: <span class="hl">192.168.1.0/24</span> atau <span class="hl">10.0.0.0/8</span>
+            </div>
+          </div>
+
+          <!-- NEW PREFIX -->
+          <div class="field">
+            <label class="field-label">
+              <span class="req">★</span> PREFIX BARU (Subnet Baru)
+              <span class="tip-wrap">
+                <span class="tip-icon">?</span>
+                <span class="tip-box">Harus LEBIH BESAR dari prefix asli. Contoh: Jika jaringan /24, maka prefix baru bisa /25, /26, /27, dst. Semakin besar prefix baru, semakin banyak subnet yang dihasilkan tapi host per subnet semakin sedikit.</span>
+              </span>
+            </label>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="color:var(--dim);font-size:1.2rem;">/</span>
+              <input type="number" id="sn-newpfx" min="1" max="32" placeholder="Contoh: 26" style="width:140px;"/>
+            </div>
+            <div class="field-hint">
+              Harus lebih besar dari prefix asli. Contoh: jika jaringan <span class="hl">/24</span>, maka prefix baru bisa <span class="hl">/25</span> sampai <span class="hl">/30</span>
+            </div>
+          </div>
+
+          <!-- MAX SHOW -->
+          <div class="field">
+            <label class="field-label">TAMPILKAN MAKSIMAL (baris tabel)</label>
+            <select id="sn-max">
+              <option value="16">16 subnet pertama</option>
+              <option value="32" selected>32 subnet pertama</option>
+              <option value="64">64 subnet pertama</option>
+              <option value="128">128 subnet pertama</option>
+              <option value="256">256 subnet pertama</option>
+              <option value="0">Semua (peringatan: bisa lambat)</option>
+            </select>
+            <div class="field-hint">Batasi jumlah baris agar browser tidak lambat untuk subnet besar.</div>
+          </div>
+
+          <div class="err-txt" id="sn-err">⚠ Pastikan prefix baru lebih besar dari prefix asli, dan input valid</div>
+
+          <div class="btn-row">
+            <button class="btn" onclick="splitSubnet()"><span>[ BAGI SUBNET ]</span></button>
+            <button class="btn btn-r" onclick="clrSplit()"><span>[ RESET ]</span></button>
+          </div>
+        </div>
+
+        <!-- SPLIT SUMMARY -->
+        <div>
+          <div class="section-tag">// RINGKASAN PEMBAGIAN</div>
+          <div class="g2" style="gap:10px;margin-bottom:12px;">
+            <div class="stat"><div class="stat-n" id="ss-count">—</div><div class="stat-l">JUMLAH SUBNET</div></div>
+            <div class="stat"><div class="stat-n" id="ss-hosts">—</div><div class="stat-l">HOST/SUBNET</div></div>
+            <div class="stat"><div class="stat-n" id="ss-usable">—</div><div class="stat-l">USABLE/SUBNET</div></div>
+            <div class="stat"><div class="stat-n" id="ss-bits">—</div><div class="stat-l">BIT DIPINJAM</div></div>
+          </div>
+          <div class="rbox" id="ss-info" style="display:none;">
+            <div class="rrow"><span class="rlabel">Jaringan Induk</span><span class="rval c-green" id="ss-parent">—</span></div>
+            <div class="rrow"><span class="rlabel">Subnet Mask Baru</span><span class="rval c-cyan" id="ss-mask">—</span></div>
+            <div class="rrow"><span class="rlabel">Wildcard Mask</span><span class="rval c-yellow" id="ss-wild">—</span></div>
+            <div class="rrow"><span class="rlabel">Total Host per Subnet</span><span class="rval" id="ss-thost">—</span></div>
+            <div class="rrow"><span class="rlabel">Usable Host per Subnet</span><span class="rval c-green" id="ss-uhost">—</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SPLIT RESULT TABLE -->
+    <div class="panel" id="sn-tbl-panel" style="display:none;">
+      <div class="panel-title">DAFTAR SUBNET HASIL PEMBAGIAN</div>
+      <div class="panel-sub" id="sn-tbl-note"></div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>NETWORK ID</th>
+              <th>SUBNET MASK</th>
+              <th>HOST PERTAMA</th>
+              <th>HOST TERAKHIR</th>
+              <th>BROADCAST</th>
+              <th>TOTAL HOST</th>
+              <th>USABLE HOST</th>
+              <th>CIDR</th>
+            </tr>
+          </thead>
+          <tbody id="sn-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /content-area -->
+
+<footer>NETCRACK v3.0 // NETWORK INFILTRATION SUITE // FOR EDUCATIONAL PURPOSES // ALL TRAFFIC ENCRYPTED</footer>
+<div class="notif" id="notif"></div>
+
+<script>
+// ══ MATRIX RAIN ══
+(function(){
+  const cv=document.getElementById('matrix-canvas'),ctx=cv.getContext('2d');
+  let cols,drops;
+  function init(){cv.width=innerWidth;cv.height=innerHeight;cols=Math.floor(cv.width/15);drops=Array(cols).fill(1);}
+  const ch='01アイウエカキクサシスタチツナニハヒフヘマミムメ';
+  function draw(){
+    ctx.fillStyle='rgba(0,0,0,0.055)';ctx.fillRect(0,0,cv.width,cv.height);
+    ctx.fillStyle='#00ff41';ctx.font='13px Share Tech Mono';
+    for(let i=0;i<drops.length;i++){
+      ctx.fillText(ch[Math.floor(Math.random()*ch.length)],i*15,drops[i]*15);
+      if(drops[i]*15>cv.height&&Math.random()>.975)drops[i]=0;
+      drops[i]++;
+    }
+  }
+  init();setInterval(draw,55);window.addEventListener('resize',init);
+})();
+
+// ══ CLOCK ══
+(function tick(){
+  const d=new Date();
+  document.getElementById('clock-live').textContent=
+    d.toISOString().replace('T',' ').substring(0,19)+' UTC';
+  setTimeout(tick,1000);
+})();
+
+// ══ TAB ══
+function sw(id,btn){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='prefix'&&!document.getElementById('pfx-tbody').children.length) buildPfxTable();
+}
+
+// ══ NOTIF ══
+function notif(m,c='green'){
+  const n=document.getElementById('notif');
+  n.style.borderColor=c==='red'?'var(--red)':'var(--green)';
+  n.style.color=c==='red'?'var(--red)':'var(--green)';
+  n.textContent='[ OK ] '+m; n.style.display='block';
+  setTimeout(()=>n.style.display='none',2800);
+}
+
+// ══ HELPERS ══
+const ipToN=(a,b,c,d)=>((a*256+b)*256+c)*256+d;
+const nToIp=n=>[(n>>>24)&255,(n>>>16)&255,(n>>>8)&255,n&255].join('.');
+const maskN=p=>p===0?0:(0xFFFFFFFF<<(32-p))>>>0;
+const decBin32=n=>(n>>>0).toString(2).padStart(32,'0');
+const fmtBin32=b=>b.match(/.{8}/g).join('.');
+const numFmt=n=>{if(n>=1e9)return (n/1e9).toFixed(2)+'B';if(n>=1e6)return (n/1e6).toFixed(2)+'M';if(n>=1e3)return (n/1e3).toFixed(1)+'K';return n.toLocaleString();}
+
+function clampO(el){let v=parseInt(el.value);if(isNaN(v))return;el.value=Math.min(255,Math.max(0,v));}
+function clampP(el){let v=parseInt(el.value);if(isNaN(v))return;el.value=Math.min(32,Math.max(0,v));}
+
+function getClass(o1){
+  if(o1<128)return 'A';if(o1<192)return 'B';if(o1<224)return 'C';if(o1<240)return 'D';return 'E';
+}
+function getDefaultMask(cls){
+  if(cls==='A')return '255.0.0.0 (/8)';
+  if(cls==='B')return '255.255.0.0 (/16)';
+  if(cls==='C')return '255.255.255.0 (/24)';
+  return 'N/A';
+}
+function ipType(o1,o2,o3){
+  if(o1===127)return{label:'LOOPBACK',badge:'badge-y'};
+  if(o1===10)return{label:'PRIVATE (RFC1918)',badge:'badge-g'};
+  if(o1===172&&o2>=16&&o2<=31)return{label:'PRIVATE (RFC1918)',badge:'badge-g'};
+  if(o1===192&&o2===168)return{label:'PRIVATE (RFC1918)',badge:'badge-g'};
+  if(o1===169&&o2===254)return{label:'LINK-LOCAL (APIPA)',badge:'badge-y'};
+  if(o1>=224&&o1<=239)return{label:'MULTICAST',badge:'badge-p'};
+  if(o1===0)return{label:'UNSPECIFIED',badge:'badge-y'};
+  if(o1===255)return{label:'LIMITED BROADCAST',badge:'badge-r'};
+  return{label:'PUBLIC',badge:'badge-c'};
+}
+
+// render bit-groups with network/host coloring
+function renderBits(container, bits32, prefix, colorMode){
+  container.innerHTML='';
+  for(let g=0;g<4;g++){
+    if(g>0){const sep=document.createElement('div');sep.className='bsep';sep.textContent='·';container.appendChild(sep);}
+    const grp=document.createElement('div');grp.className='bit-grp';
+    for(let i=0;i<8;i++){
+      const idx=g*8+i;
+      const b=document.createElement('div');
+      const ch=bits32[idx];
+      if(colorMode==='nh'){
+        // network vs host
+        b.className='bit '+(idx<prefix?'bN':'bH');
+      } else {
+        b.className='bit '+(ch==='1'?'b1':'b0');
+      }
+      b.textContent=ch;
+      grp.appendChild(b);
+    }
+    container.appendChild(grp);
+  }
+}
+
+// ══════════════════════════════════════
+//  TAB 1 — BINARY CONVERTER
+// ══════════════════════════════════════
+const hintMap={
+  dec:'<span class="hl">Decimal</span>: Angka biasa 0–9. Contoh: <span class="hl">255</span> atau <span class="hl">192</span>',
+  bin:'<span class="hl">Binary</span>: Hanya angka 0 dan 1. Contoh: <span class="hl">11111111</span> (=255)',
+  hex:'<span class="hl">Hex</span>: Angka 0–9 dan huruf A–F. Contoh: <span class="hl">FF</span> atau <span class="hl">C0A8</span>',
+  oct:'<span class="hl">Octal</span>: Angka 0–7 saja. Contoh: <span class="hl">377</span> (=255)'
+};
+document.getElementById('conv-from').addEventListener('change',function(){
+  document.getElementById('conv-hint').innerHTML=hintMap[this.value];
+});
+
+function autoConvert(){
+  const raw=document.getElementById('conv-input').value.trim();
+  const fmt=document.getElementById('conv-from').value;
+  const err=document.getElementById('conv-err');
+  const inp=document.getElementById('conv-input');
+  err.classList.remove('show');
+  if(!raw){clearConv();return;}
+  let num;
+  try{
+    if(fmt==='dec'){if(!/^\d+$/.test(raw))throw 0;num=parseInt(raw,10);}
+    else if(fmt==='bin'){if(!/^[01]+$/.test(raw))throw 0;num=parseInt(raw,2);}
+    else if(fmt==='hex'){if(!/^[0-9a-fA-F]+$/.test(raw))throw 0;num=parseInt(raw,16);}
+    else if(fmt==='oct'){if(!/^[0-7]+$/.test(raw))throw 0;num=parseInt(raw,8);}
+    if(isNaN(num)||num<0)throw 0;
+    inp.classList.add('valid');inp.classList.remove('invalid');
+  }catch(e){
+    err.classList.add('show');inp.classList.add('invalid');inp.classList.remove('valid');
+    setDash(['o-dec','o-bin','o-hex','o-oct']);document.getElementById('bit-vis').innerHTML='';
+    document.getElementById('o-extra').style.display='none';return;
+  }
+  document.getElementById('o-dec').textContent=num.toLocaleString();
+  document.getElementById('o-bin').textContent=num.toString(2).padStart(8,'0');
+  document.getElementById('o-hex').textContent='0x'+num.toString(16).toUpperCase().padStart(2,'0');
+  document.getElementById('o-oct').textContent='0o'+num.toString(8);
+  document.getElementById('o-extra').style.display='block';
+  document.getElementById('o-signed').textContent=(num|0).toString(10);
+  const len=Math.max(8,Math.ceil(num.toString(2).length/8)*8);
+  const padded=num.toString(2).padStart(len,'0');
+  document.getElementById('o-bingrp').textContent=padded.match(/.{8}/g).join(' ');
+  // bit vis
+  const bviz=document.getElementById('bit-vis');
+  bviz.innerHTML='';
+  for(let g=0;g<len/8;g++){
+    if(g>0){const sep=document.createElement('div');sep.className='bsep';sep.textContent='·';bviz.appendChild(sep);}
+    const grp=document.createElement('div');grp.className='bit-grp';
+    for(let i=0;i<8;i++){
+      const bd=document.createElement('div');
+      bd.className='bit '+(padded[g*8+i]==='1'?'b1':'b0');
+      bd.textContent=padded[g*8+i];
+      grp.appendChild(bd);
+    }
+    bviz.appendChild(grp);
+  }
+}
+
+function clearConv(){
+  document.getElementById('conv-input').value='';
+  document.getElementById('conv-input').classList.remove('valid','invalid');
+  setDash(['o-dec','o-bin','o-hex','o-oct']);
+  document.getElementById('bit-vis').innerHTML='';
+  document.getElementById('o-extra').style.display='none';
+  document.getElementById('conv-err').classList.remove('show');
+}
+
+function encodeAscii(){
+  const txt=document.getElementById('ascii-in').value;
+  const out=document.getElementById('ascii-out');
+  if(!txt){out.innerHTML='[ Ketik teks di atas untuk memulai encoding... ]';return;}
+  let lines=['<span class="td">// KARAKTER → DECIMAL → HEX → BINARY</span>'];
+  for(const ch of txt){
+    const c=ch.charCodeAt(0),b=c.toString(2).padStart(8,'0'),h=c.toString(16).toUpperCase().padStart(2,'0');
+    lines.push(`<span class="tc">'${ch===' '?'SPC':ch}'</span>  DEC:<span class="ty">${String(c).padStart(3)}</span>  HEX:<span class="ty">0x${h}</span>  BIN:<span class="tg">${b}</span>`);
+  }
+  out.innerHTML=lines.join('\n');
+}
+
+// ══════════════════════════════════════
+//  TAB 2 — SUBNET ANALYZER
+// ══════════════════════════════════════
+function getOctets(){
+  return [
+    parseInt(document.getElementById('ip1').value),
+    parseInt(document.getElementById('ip2').value),
+    parseInt(document.getElementById('ip3').value),
+    parseInt(document.getElementById('ip4').value),
+    parseInt(document.getElementById('ip-pfx').value)
+  ];
+}
+
+function liveSubnetPreview(){
+  const [o1,o2,o3,o4,pf]=getOctets();
+  const prev=document.getElementById('live-prev');
+  const ptxt=document.getElementById('live-prev-txt');
+  if([o1,o2,o3,o4].some(x=>isNaN(x))||isNaN(pf)){prev.style.display='none';return;}
+  prev.style.display='block';
+  ptxt.innerHTML=`<span class="tc">${o1}.${o2}.${o3}.${o4}/${pf}</span> <span class="td">→ Klik [ANALISIS SUBNET] untuk detail lengkap</span>`;
+}
+
+function analyzeSubnet(){
+  const [o1,o2,o3,o4,pf]=getOctets();
+  const err=document.getElementById('sub-err');
+  err.classList.remove('show');
+  if([o1,o2,o3,o4].some(x=>isNaN(x)||x<0||x>255)||isNaN(pf)||pf<0||pf>32){
+    err.classList.add('show');return;
+  }
+
+  const ipN=ipToN(o1,o2,o3,o4);
+  const mask=maskN(pf);
+  const wild=(~mask)>>>0;
+  const netN=(ipN&mask)>>>0;
+  const bcast=(netN|wild)>>>0;
+  const total=pf<=30?Math.pow(2,32-pf):(pf===31?2:1);
+  const usable=pf<=30?total-2:(pf===31?2:1);
+  const fh=pf<=30?nToIp(netN+1):nToIp(netN);
+  const lh=pf<=30?nToIp(bcast-1):nToIp(bcast);
+  const cls=getClass(o1);
+  const typ=ipType(o1,o2,o3);
+  const isNet=netN===ipN;
+  const isBcast=bcast===ipN;
+
+  // Default mask bits for class
+  const defBits={A:8,B:16,C:24}[cls]||0;
+  const subnetBits=Math.max(0,pf-defBits);
+  const nSub=defBits>0?Math.pow(2,subnetBits):1;
+
+  const maskHex='0x'+mask.toString(16).toUpperCase().padStart(8,'0');
+
+  // Set stat cards
+  s('q-total',numFmt(total));s('q-usable',numFmt(usable));s('q-class',cls);
+  document.getElementById('q-type').innerHTML=`<span class="badge ${typ.badge}">${typ.label.split(' ')[0]}</span>`;
+
+  // Main results
+  s('r-net',nToIp(netN));s('r-mask',nToIp(mask));
+  s('r-wild',nToIp(wild));s('r-bcast',nToIp(bcast));
+  s('r-first',fh);s('r-last',lh);
+  s('r-range',fh+' — '+lh);
+  s('r-total',total.toLocaleString()+' host');
+  s('r-usable',usable.toLocaleString()+' host');
+  s('r-cidr',`${nToIp(netN)}/${pf}`);
+  s('r-class',`Kelas ${cls}`);
+  document.getElementById('r-type').innerHTML=`<span class="badge ${typ.badge}">${typ.label}</span>`;
+  s('r-defmask',getDefaultMask(cls));
+  s('r-maskhex',maskHex);
+  s('r-maskdec',mask.toString(10));
+  s('r-nsub',nSub.toLocaleString()+` subnet (${subnetBits} bit dipinjam dari host)`);
+  document.getElementById('r-isnet').innerHTML=isNet?'<span class="badge badge-r">YA — Ini adalah Network ID</span>':'<span class="badge badge-g">TIDAK — Ini adalah host IP</span>';
+  document.getElementById('r-isbcast').innerHTML=isBcast?'<span class="badge badge-r">YA — Ini adalah Broadcast</span>':'<span class="badge badge-g">TIDAK</span>';
+
+  // Format table
+  s('f-dd',nToIp(mask));s('f-cidr','/'+pf);s('f-hex',maskHex);
+  s('f-bin',fmtBin32(decBin32(mask)));
+
+  // Binary breakdowns
+  renderBits(document.getElementById('bb-ip'),decBin32(ipN),pf,'nh');
+  renderBits(document.getElementById('bb-mask'),decBin32(mask),pf,'nh');
+  renderBits(document.getElementById('bb-net'),decBin32(netN),pf,'nh');
+  renderBits(document.getElementById('bb-bcast'),decBin32(bcast),pf,'nh');
+
+  // Log
+  const ts=new Date().toISOString().replace('T',' ').substring(0,19);
+  document.getElementById('sub-log').innerHTML=[
+    `<span class="td">[${ts}]</span> <span class="tg">TARGET:</span> ${o1}.${o2}.${o3}.${o4}/${pf}`,
+    `<span class="td">[${ts}]</span> <span class="ty">MENGANALISIS</span> subnet parameters...`,
+    `<span class="td">[${ts}]</span> ─────────────────────────────────────────`,
+    `<span class="td">[${ts}]</span> <span class="tc">NETWORK ID     :</span> ${nToIp(netN)}`,
+    `<span class="td">[${ts}]</span> <span class="tc">SUBNET MASK    :</span> ${nToIp(mask)} (${maskHex})`,
+    `<span class="td">[${ts}]</span> <span class="tc">WILDCARD MASK  :</span> ${nToIp(wild)}`,
+    `<span class="td">[${ts}]</span> <span class="tc">BROADCAST      :</span> ${nToIp(bcast)}`,
+    `<span class="td">[${ts}]</span> <span class="tc">HOST RANGE     :</span> ${fh} — ${lh}`,
+    `<span class="td">[${ts}]</span> <span class="tc">TOTAL HOST     :</span> ${total.toLocaleString()}`,
+    `<span class="td">[${ts}]</span> <span class="tc">USABLE HOST    :</span> ${usable.toLocaleString()}`,
+    `<span class="td">[${ts}]</span> <span class="tc">KELAS IP       :</span> Kelas ${cls}`,
+    `<span class="td">[${ts}]</span> <span class="tc">TIPE           :</span> ${typ.label}`,
+    `<span class="td">[${ts}]</span> <span class="tc">SUBNET BITS    :</span> ${subnetBits} bit dipinjam dari host`,
+    `<span class="td">[${ts}]</span> ─────────────────────────────────────────`,
+    `<span class="td">[${ts}]</span> <span class="tg">ANALISIS SELESAI.</span>`,
+  ].join('\n');
+
+  document.getElementById('sub-result').style.display='block';
+  notif('Subnet analysis complete');
+}
+
+function clrSubnet(){
+  ['ip1','ip2','ip3','ip4','ip-pfx'].forEach(id=>{document.getElementById(id).value='';});
+  document.getElementById('sub-result').style.display='none';
+  document.getElementById('sub-err').classList.remove('show');
+  document.getElementById('live-prev').style.display='none';
+  ['q-total','q-usable','q-class','q-type'].forEach(id=>s(id,'—'));
+}
+
+// ══════════════════════════════════════
+//  TAB 3 — PREFIX CALCULATOR
+// ══════════════════════════════════════
+function calcPfx(){
+  const pf=parseInt(document.getElementById('pfx-in').value);
+  const err=document.getElementById('pfx-err');
+  err.classList.remove('show');
+  if(isNaN(pf)||pf<0||pf>32){err.classList.add('show');return;}
+
+  const mask=maskN(pf);
+  const wild=(~mask)>>>0;
+  const total=pf<=30?Math.pow(2,32-pf):(pf===31?2:1);
+  const usable=pf<=30?total-2:(pf===31?2:1);
+  const hb=32-pf;
+
+  s('p-pfx','/'+pf);
+  s('p-mask',nToIp(mask));
+  s('p-binmask',fmtBin32(decBin32(mask)));
+  s('p-hexmask','0x'+mask.toString(16).toUpperCase().padStart(8,'0'));
+  s('p-wild',nToIp(wild));
+  s('p-total',total.toLocaleString()+' host');
+  s('p-usable',usable.toLocaleString()+' host');
+  s('p-netbits',pf+' bit');
+  s('p-hostbits',hb+' bit');
+
+  // bit viz
+  const bv=document.getElementById('p-bitviz');
+  bv.innerHTML='';
+  const bits=decBin32(mask);
+  for(let g=0;g<4;g++){
+    if(g>0){const sep=document.createElement('div');sep.className='bsep';sep.textContent='·';bv.appendChild(sep);}
+    const grp=document.createElement('div');grp.className='bit-grp';
+    for(let i=0;i<8;i++){
+      const idx=g*8+i;
+      const bd=document.createElement('div');
+      bd.className='bit '+(idx<pf?'bN':'bH');
+      bd.textContent=bits[idx];
+      grp.appendChild(bd);
+    }
+    bv.appendChild(grp);
+  }
+
+  document.getElementById('pfx-result').style.display='block';
+
+  // Highlight table
+  document.querySelectorAll('#pfx-tbody tr').forEach(r=>{r.classList.remove('tr-hl');r.style.borderLeft='';});
+  const rows=document.querySelectorAll('#pfx-tbody tr');
+  if(rows[pf]){rows[pf].classList.add('tr-hl');rows[pf].scrollIntoView({behavior:'smooth',block:'nearest'});}
+
+  notif('Prefix /'+pf+' decoded');
+}
+
+function clrPfx(){
+  document.getElementById('pfx-in').value='';
+  document.getElementById('pfx-result').style.display='none';
+  document.getElementById('pfx-err').classList.remove('show');
+  document.querySelectorAll('#pfx-tbody tr').forEach(r=>r.classList.remove('tr-hl'));
+}
+
+function buildPfxTable(){
+  const tb=document.getElementById('pfx-tbody');
+  tb.innerHTML='';
+  for(let p=0;p<=32;p++){
+    const mask=maskN(p);
+    const wild=(~mask)>>>0;
+    const total=p<=30?Math.pow(2,32-p):(p===31?2:1);
+    const usable=p<=30?total-2:(p===31?2:1);
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td style="color:var(--green);font-weight:bold;font-family:'Orbitron',monospace;">/&thinsp;${p}</td>
+      <td>${nToIp(mask)}</td>
+      <td style="color:var(--yellow);">${nToIp(wild)}</td>
+      <td style="color:var(--green);">${total.toLocaleString()}</td>
+      <td>${usable.toLocaleString()}</td>
+      <td style="color:var(--cyan);">${p}</td>
+      <td style="color:var(--yellow);">${32-p}</td>
+      <td style="font-size:.68rem;color:var(--dim);">${fmtBin32(decBin32(mask))}</td>
+    `;
+    tb.appendChild(tr);
+  }
+}
+// build on page load
+buildPfxTable();
+
+// ══════════════════════════════════════
+//  TAB 4 — SUBNET SPLITTER
+// ══════════════════════════════════════
+function splitSubnet(){
+  const o1=parseInt(document.getElementById('sn1').value);
+  const o2=parseInt(document.getElementById('sn2').value);
+  const o3=parseInt(document.getElementById('sn3').value);
+  const o4=parseInt(document.getElementById('sn4').value);
+  const opf=parseInt(document.getElementById('sn-pfx').value);
+  const npf=parseInt(document.getElementById('sn-newpfx').value);
+  const maxShow=parseInt(document.getElementById('sn-max').value)||0;
+  const err=document.getElementById('sn-err');
+  err.classList.remove('show');
+
+  if([o1,o2,o3,o4].some(x=>isNaN(x)||x<0||x>255)||isNaN(opf)||opf<0||opf>32||isNaN(npf)){
+    err.classList.add('show');return;
+  }
+  if(npf<=opf){err.textContent='⚠ Prefix baru harus LEBIH BESAR dari prefix asli';err.classList.add('show');return;}
+  if(npf>32){err.textContent='⚠ Prefix tidak boleh melebihi 32';err.classList.add('show');return;}
+
+  const parentN=(ipToN(o1,o2,o3,o4)&maskN(opf))>>>0;
+  const newMask=maskN(npf);
+  const newWild=(~newMask)>>>0;
+  const subSize=Math.pow(2,32-npf);
+  const totalSubs=Math.pow(2,npf-opf);
+  const usable=npf<=30?subSize-2:(npf===31?2:1);
+  const borrowBits=npf-opf;
+
+  s('ss-count',totalSubs.toLocaleString());
+  s('ss-hosts',subSize.toLocaleString());
+  s('ss-usable',usable.toLocaleString());
+  s('ss-bits',borrowBits+' bit');
+  s('ss-parent',nToIp(parentN)+'/'+opf);
+  s('ss-mask',nToIp(newMask));
+  s('ss-wild',nToIp(newWild));
+  s('ss-thost',subSize.toLocaleString());
+  s('ss-uhost',usable.toLocaleString());
+  document.getElementById('ss-info').style.display='block';
+
+  // Build table
+  const tb=document.getElementById('sn-tbody');
+  tb.innerHTML='';
+  const limit=maxShow===0?totalSubs:Math.min(totalSubs,maxShow);
+  const note=document.getElementById('sn-tbl-note');
+  note.textContent=`Menampilkan ${limit.toLocaleString()} dari ${totalSubs.toLocaleString()} subnet total`;
+  if(totalSubs>limit)note.textContent+=' (dibatasi untuk performa browser)';
+
+  for(let i=0;i<limit;i++){
+    const netN=(parentN+i*subSize)>>>0;
+    const bcast=(netN|newWild)>>>0;
+    const fh=npf<=30?nToIp(netN+1):nToIp(netN);
+    const lh=npf<=30?nToIp(bcast-1):nToIp(bcast);
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td style="color:var(--dim);">${i+1}</td>
+      <td style="color:var(--green);">${nToIp(netN)}</td>
+      <td>${nToIp(newMask)}</td>
+      <td style="color:var(--cyan);">${fh}</td>
+      <td style="color:var(--cyan);">${lh}</td>
+      <td style="color:var(--red);">${nToIp(bcast)}</td>
+      <td>${subSize.toLocaleString()}</td>
+      <td style="color:var(--green);">${usable.toLocaleString()}</td>
+      <td style="color:var(--yellow);">${nToIp(netN)}/${npf}</td>
+    `;
+    tb.appendChild(tr);
+  }
+
+  document.getElementById('sn-tbl-panel').style.display='block';
+  notif(`${totalSubs.toLocaleString()} subnet berhasil dibuat`);
+}
+
+function clrSplit(){
+  ['sn1','sn2','sn3','sn4','sn-pfx','sn-newpfx'].forEach(id=>document.getElementById(id).value='');
+  ['ss-count','ss-hosts','ss-usable','ss-bits'].forEach(id=>s(id,'—'));
+  document.getElementById('ss-info').style.display='none';
+  document.getElementById('sn-tbl-panel').style.display='none';
+  document.getElementById('sn-err').classList.remove('show');
+}
+
+// ══ UTILS ══
+function s(id,v){const el=document.getElementById(id);if(el)el.textContent=v;}
+function setDash(ids){ids.forEach(id=>s(id,'—'));}
+</script>
+</body>
+</html>
